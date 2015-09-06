@@ -101,7 +101,7 @@ def parse_task_details(name, task_output, alias, fabfile_path, active_loc):
             else:
                 arguments.append(m.group(1))
 
-    return name, docstring, arguments, alias, fabfile_path, active_loc
+    return alias + '__' + name, docstring, arguments, alias, fabfile_path, active_loc
 
 
 def get_fabric_tasks(project):
@@ -228,7 +228,10 @@ def build_command(deployment, session, abort_on_prompts=True):
     # Special ones get set a different way
     special_task_configs = list(set(task_configs) & set(command_to_config.keys()))
 
-    command = 'fab ' + deployment.task.name
+    if deployment.task.name.find('__'):
+        command = 'fab ' + deployment.task.name.split('__')[-1]
+    else:
+        command = 'fab ' + deployment.task.name
 
     task_details = get_task_details(deployment.stage.project, deployment.task.name)
 

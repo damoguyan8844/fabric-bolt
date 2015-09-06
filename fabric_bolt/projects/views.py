@@ -600,10 +600,7 @@ class ProjectStageTasksAjax(ProjectSubPageMixin, DetailView):
 
         all_tasks = get_fabric_tasks(self.object.project)
         task_names = [ x[0] for x in all_tasks]
-        task_full_names = [ (x[0],x[3]) for x in all_tasks]
-
-        context['all_tasks'] = task_full_names
-        #context['all_tasks_fabfile'] = task_files
+        context['all_tasks'] = task_names
         context['frequent_tasks_run'] = models.Task.objects.filter(
             name__in=task_names
         ).order_by('-times_used')[:3]

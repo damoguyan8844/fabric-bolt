@@ -19,8 +19,8 @@
 <div>
     <select class="form-control" id="all_tasks_dropdown">
         <option value="">All Tasks</option>
-        {% for task_name, fabfile in all_tasks %}
-            <option value="{% url 'projects_deployment_create' project.pk object.pk task_name %}">{{ fabfile }}/{{ task_name }}</option>
+        {% for task_name in all_tasks %}
+            <option value="{% url 'projects_deployment_create' project.pk object.pk task_name %}">{{ task_name }}</option>
         {% endfor %}
     </select>
 </div>
