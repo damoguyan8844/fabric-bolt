@@ -76,7 +76,7 @@ def get_fabfile_path(project):
         return settings.FABFILE_PATH, None
 
 
-def parse_task_details(name, task_output):
+def parse_task_details(name, task_output, alias, fabfile_path, active_loc):
     lines = task_output.splitlines()
     docstring = '\n'.join([line.strip() for line in lines[2:-2]]).strip()
     arguments_line = lines[-2].strip()
@@ -101,7 +101,7 @@ def parse_task_details(name, task_output):
             else:
                 arguments.append(m.group(1))
 
-    return name, docstring, arguments
+    return name, docstring, arguments, alias, fabfile_path, active_loc
 
 
 def get_fabric_tasks(project):
@@ -116,28 +116,39 @@ def get_fabric_tasks(project):
         return cached_result
 
     try:
+
+        dict_fabfile = {}
         fabfile_path, activate_loc = get_fabfile_path(project)
 
-        if activate_loc:
-            output = check_output('source {};fab --list --list-format=short --fabfile={}'.format(activate_loc, fabfile_path), shell=True)
-        else:
-            output = check_output(['fab', '--list', '--list-format=short', '--fabfile={}'.format(fabfile_path)])
+        dict_fabfile['default'] = fabfile_path, activate_loc
 
-        lines = output.splitlines()
-        tasks = []
-        for line in lines:
-            name = line.strip()
+        if type(settings.FABFILES).__name__ == 'dict':
+            for alias, fabfile in settings.FABFILES.items():
+                dict_fabfile[alias] = fabfile, None
+
+        for alias, fabfile_setting in dict_fabfile.items():
+            fabfile_path, activate_loc = fabfile_setting
+
             if activate_loc:
-                o = check_output(
-                    'source {};fab --display={} --fabfile={}'.format(activate_loc, name, fabfile_path),
-                    shell=True
-                )
+                output = check_output('source {};fab --list --list-format=short --fabfile={}'.format(activate_loc, fabfile_path), shell=True)
             else:
-                o = check_output(
-                    ['fab', '--display={}'.format(name), '--fabfile={}'.format(fabfile_path)]
-                )
+                output = check_output(['fab', '--list', '--list-format=short', '--fabfile={}'.format(fabfile_path)])
 
-            tasks.append(parse_task_details(name, o))
+            lines = output.splitlines()
+            tasks = []
+            for line in lines:
+                name = line.strip()
+                if activate_loc:
+                    o = check_output(
+                        'source {};fab --display={} --fabfile={}'.format(activate_loc, name, fabfile_path),
+                        shell=True
+                    )
+                else:
+                    o = check_output(
+                        ['fab', '--display={}'.format(name), '--fabfile={}'.format(fabfile_path)]
+                    )
+
+                tasks.append(parse_task_details(name, o, alias, fabfile_path, activate_loc))
 
         cache.set(cache_key, tasks, settings.FABRIC_TASK_CACHE_TIMEOUT)
     except Exception as e:
@@ -259,7 +270,10 @@ def build_command(deployment, session, abort_on_prompts=True):
     if hosts:
         command += ' --hosts=' + ','.join(hosts)
 
-    fabfile_path, active_loc = get_fabfile_path(deployment.stage.project)
+    #fabfile_path, active_loc = get_fabfile_path(deployment.stage.project)
+    fabfile_path = task_details[4]
+    active_loc = task_details[5]
+
     command += ' --fabfile={}'.format(fabfile_path)
 
     if active_loc:
